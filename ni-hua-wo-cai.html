@@ -1,0 +1,1028 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>你画我猜</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fff4e4;
+        --bg2: #ffe7cf;
+        --card: #fffdf8;
+        --ink: #4a3226;
+        --ink-soft: #8a6a54;
+        --line: #f0d9bd;
+        --accent: #ff6f4d;
+        --accent-deep: #e8502f;
+        --accent-soft: #ffe0d1;
+        --good: #2f9e63;
+        --bad: #d84a4a;
+        --board: #ffffff;
+        --chip: #fff1de;
+        --shadow: 0 10px 28px rgba(190, 110, 50, .18);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #241811;
+          --bg2: #2e1e13;
+          --card: #33241a;
+          --ink: #f8e9d7;
+          --ink-soft: #c9a582;
+          --line: #54382a;
+          --accent: #ff8a66;
+          --accent-deep: #ff7550;
+          --accent-soft: #4d2c1e;
+          --board: #fdf8f0;
+          --chip: #402d1f;
+          --shadow: 0 10px 28px rgba(0, 0, 0, .45);
+        }
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, var(--bg) 0%, var(--bg2) 100%);
+        min-height: 100dvh;
+      }
+      button, input { font-family: inherit; }
+      button { cursor: pointer; }
+      #app { max-width: 480px; margin: 0 auto; padding: 18px 16px calc(20px + env(safe-area-inset-bottom)); }
+      .hidden { display: none !important; }
+
+      /* ---------- 通用 ---------- */
+      .btn {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        width: 100%; min-height: 56px; padding: 12px 18px;
+        border: none; border-radius: 18px;
+        font-size: 18px; font-weight: 700; letter-spacing: .02em;
+        background: var(--accent); color: #fff;
+        box-shadow: 0 6px 0 var(--accent-deep), var(--shadow);
+        transition: transform .08s ease, box-shadow .08s ease, opacity .15s;
+      }
+      .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--accent-deep); }
+      .btn:disabled { opacity: .45; pointer-events: none; }
+      .btn.ghost {
+        background: var(--card); color: var(--ink);
+        border: 2px solid var(--line); box-shadow: var(--shadow);
+      }
+      .btn.small { min-height: 48px; font-size: 16px; border-radius: 14px; box-shadow: var(--shadow); }
+      .card {
+        background: var(--card); border: 2px solid var(--line);
+        border-radius: 24px; box-shadow: var(--shadow); padding: 20px;
+      }
+      .muted { color: var(--ink-soft); }
+
+      /* ---------- 首页 ---------- */
+      .hero { text-align: center; padding: 26px 0 8px; }
+      .hero-art { display: flex; justify-content: center; margin-bottom: 6px; }
+      h1.title {
+        font-family: "ZCOOL KuaiLe", "Noto Sans SC", sans-serif;
+        font-size: 52px; margin: 4px 0 6px; letter-spacing: .04em; font-weight: 400;
+      }
+      .hero p { margin: 0; color: var(--ink-soft); font-size: 15px; line-height: 1.6; }
+      .home-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 22px; }
+      .or-line { display: flex; align-items: center; gap: 12px; color: var(--ink-soft); font-size: 13px; margin: 4px 2px; }
+      .or-line::before, .or-line::after { content: ""; flex: 1; height: 2px; background: var(--line); border-radius: 2px; }
+      .join-row { display: flex; gap: 10px; }
+      .join-row input {
+        flex: 1; min-width: 0; min-height: 56px; padding: 10px 14px;
+        font-size: 22px; font-weight: 700; text-align: center; letter-spacing: .35em; text-transform: uppercase;
+        color: var(--ink); background: var(--card);
+        border: 2px solid var(--line); border-radius: 18px; outline: none;
+      }
+      .join-row input:focus { border-color: var(--accent); }
+      .join-row .btn { width: auto; padding: 12px 22px; flex-shrink: 0; }
+      .howto { margin-top: 22px; }
+      .howto h2 { font-size: 16px; margin: 0 0 10px; }
+      .howto ol { margin: 0; padding-left: 20px; color: var(--ink-soft); font-size: 14px; line-height: 1.9; }
+      .howto b { color: var(--ink); }
+      .home-error {
+        background: var(--card); border: 2px solid var(--bad); border-radius: 18px;
+        padding: 16px; box-shadow: var(--shadow);
+      }
+      .home-error p { margin: 0 0 12px; color: var(--ink); font-size: 15px; line-height: 1.65; }
+      .home-error .btn { min-height: 50px; }
+
+      /* ---------- 等待室 ---------- */
+      .wait-wrap { text-align: center; padding-top: 30px; }
+      .wait-wrap h2 { font-family: "ZCOOL KuaiLe", sans-serif; font-weight: 400; font-size: 28px; margin: 0 0 6px; }
+      .room-code {
+        font-family: "ZCOOL KuaiLe", sans-serif;
+        font-size: 58px; letter-spacing: .28em; text-indent: .28em;
+        color: var(--accent-deep); margin: 14px 0 4px; line-height: 1.15;
+      }
+      .wait-status { min-height: 24px; color: var(--ink-soft); font-size: 15px; margin: 10px 0 18px; }
+      .dots::after { content: ""; animation: dots 1.4s steps(4) infinite; }
+      @keyframes dots { 0% { content: ""; } 25% { content: "。"; } 50% { content: "。。"; } 75% { content: "。。。"; } }
+      @media (prefers-reduced-motion: reduce) { .dots::after { animation: none; content: "…"; } }
+      .wait-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+
+      /* ---------- 对局 ---------- */
+      .topbar { display: flex; align-items: stretch; gap: 8px; margin-bottom: 10px; }
+      .score-chip {
+        flex: 1; background: var(--card); border: 2px solid var(--line); border-radius: 16px;
+        padding: 8px 10px; text-align: center; box-shadow: var(--shadow);
+      }
+      .score-chip .who { font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+      .score-chip .pts { font-family: "ZCOOL KuaiLe", sans-serif; font-size: 26px; line-height: 1.1; }
+      .score-chip.me { border-color: var(--accent); }
+      .mid-chip {
+        width: 86px; flex-shrink: 0; background: var(--chip); border: 2px solid var(--line); border-radius: 16px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 4px;
+      }
+      .mid-chip .round { font-size: 12px; font-weight: 700; color: var(--ink-soft); }
+      .mid-chip .timer { font-family: "ZCOOL KuaiLe", sans-serif; font-size: 26px; line-height: 1.1; }
+      .mid-chip .timer.low { color: var(--bad); }
+      .timerbar { height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; margin-bottom: 10px; }
+      .timerbar > div { height: 100%; background: var(--accent); border-radius: 99px; transition: width .3s linear; }
+      .timerbar > div.low { background: var(--bad); }
+
+      .role-banner {
+        border-radius: 16px; padding: 10px 14px; margin-bottom: 10px;
+        background: var(--accent-soft); border: 2px solid var(--line);
+        display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 58px;
+      }
+      .role-banner .role { font-size: 13px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+      .role-banner .word {
+        font-family: "ZCOOL KuaiLe", sans-serif; font-size: 30px; line-height: 1.1; text-align: right;
+      }
+      .role-banner .blanks { font-size: 24px; letter-spacing: .3em; font-weight: 900; text-align: right; }
+      .role-banner .cat { font-size: 12px; color: var(--ink-soft); text-align: right; }
+
+      .board-wrap { position: relative; border-radius: 20px; overflow: hidden; border: 3px solid var(--line); box-shadow: var(--shadow); background: var(--board); }
+      canvas#board { display: block; width: 100%; aspect-ratio: 4 / 3; touch-action: none; background: var(--board); }
+      canvas#board.locked { pointer-events: none; }
+      .board-overlay {
+        position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: rgba(255, 248, 238, .93); text-align: center; padding: 20px; gap: 6px;
+      }
+      @media (prefers-color-scheme: dark) { .board-overlay { background: rgba(36, 24, 17, .93); } }
+      .board-overlay .big { font-family: "ZCOOL KuaiLe", sans-serif; font-size: 34px; }
+      .board-overlay .ans { font-family: "ZCOOL KuaiLe", sans-serif; font-size: 40px; color: var(--accent-deep); }
+      .board-overlay .sub { color: var(--ink-soft); font-size: 15px; }
+
+      .feed { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 2px 0; min-height: 30px; align-content: flex-start; }
+      .feed .g {
+        font-size: 14px; padding: 4px 10px; border-radius: 99px; background: var(--chip); border: 1.5px solid var(--line);
+      }
+      .feed .g.ok { background: var(--good); border-color: var(--good); color: #fff; font-weight: 700; }
+      .feed .g.no { opacity: .75; text-decoration: line-through; }
+      .feed .who { font-size: 11px; color: var(--ink-soft); align-self: center; width: 100%; }
+
+      /* 工具栏 */
+      .tools { margin-top: 12px; display: grid; gap: 10px; }
+      .swatches { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; }
+      .sw {
+        aspect-ratio: 1; min-height: 36px; border-radius: 12px; border: 3px solid transparent;
+        padding: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08);
+      }
+      .sw.on { border-color: var(--ink); transform: scale(1.08); }
+      .tool-row { display: flex; gap: 8px; }
+      .tool-btn {
+        flex: 1; min-height: 48px; border-radius: 14px; border: 2px solid var(--line);
+        background: var(--card); color: var(--ink); font-size: 15px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center; gap: 5px; padding: 8px 4px;
+      }
+      .tool-btn.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-deep); }
+      .tool-btn .dot { border-radius: 50%; background: currentColor; display: inline-block; }
+
+      /* 猜词区 */
+      .guess-row { display: flex; gap: 10px; margin-top: 12px; }
+      .guess-row input {
+        flex: 1; min-width: 0; min-height: 56px; padding: 10px 16px; font-size: 18px;
+        color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 16px; outline: none;
+      }
+      .guess-row input:focus { border-color: var(--accent); }
+      .guess-row .btn { width: auto; padding: 12px 26px; flex-shrink: 0; }
+      .drawer-note { margin-top: 12px; text-align: center; color: var(--ink-soft); font-size: 14px; min-height: 24px; }
+
+      /* ---------- 结算 ---------- */
+      .over-wrap { text-align: center; padding-top: 24px; }
+      .over-wrap h2 { font-family: "ZCOOL KuaiLe", sans-serif; font-weight: 400; font-size: 34px; margin: 0 0 4px; }
+      .final-scores { display: flex; gap: 10px; margin: 18px 0; }
+      .final-scores .score-chip .pts { font-size: 44px; }
+      .over-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+
+      /* ---------- 弹窗 / 提示 ---------- */
+      .modal-mask {
+        position: fixed; inset: 0; background: rgba(40, 22, 10, .55);
+        display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+      }
+      .modal { background: var(--card); border-radius: 24px; padding: 26px 22px; max-width: 360px; width: 100%; text-align: center; box-shadow: var(--shadow); }
+      .modal h3 { font-family: "ZCOOL KuaiLe", sans-serif; font-weight: 400; font-size: 26px; margin: 0 0 8px; }
+      .modal p { color: var(--ink-soft); margin: 0 0 18px; line-height: 1.6; font-size: 15px; }
+      #toast {
+        position: fixed; left: 50%; bottom: calc(26px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px);
+        background: var(--ink); color: var(--bg); padding: 12px 20px; border-radius: 99px; font-size: 15px; font-weight: 700;
+        opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; z-index: 60; max-width: 88vw; text-align: center;
+      }
+      #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+
+      <!-- 首页 -->
+      <section id="screen-home">
+        <div class="hero">
+          <div class="hero-art" aria-hidden="true">
+            <svg width="72" height="56" viewBox="0 0 72 56" fill="none">
+              <path d="M6 48 C 16 20, 26 44, 36 16 C 42 2, 52 30, 66 10" stroke="#ff6f4d" stroke-width="5" stroke-linecap="round"/>
+              <path d="M58.2 3.6c1.9-2 5.2-2 7.1 0 1.9 2.1 1.9 5.4 0 7.5l-7.1 7.4-7.1-7.4c-1.9-2.1-1.9-5.4 0-7.5 1.9-2 5.2-2 7.1 0Z" fill="#ff6f4d" transform="translate(2 30) scale(0.62)"/>
+              <circle cx="8" cy="49" r="4" fill="#f5a623"/>
+            </svg>
+          </div>
+          <h1 class="title">你画我猜</h1>
+          <p>两个人的小游戏：一人画，一人猜<br />把房间号发给 TA，马上开玩</p>
+        </div>
+
+        <div class="home-actions">
+          <button class="btn" id="btn-create">创建房间</button>
+          <div class="or-line">或者输入房间号加入</div>
+          <div class="join-row">
+            <input id="input-code" type="text" inputmode="text" autocomplete="off" autocapitalize="characters"
+                   maxlength="4" placeholder="房间号" aria-label="房间号" />
+            <button class="btn" id="btn-join">加入</button>
+          </div>
+          <div class="home-error hidden" id="home-error" role="alert">
+            <p id="home-error-text"></p>
+            <button class="btn small" id="btn-retry" type="button">重试</button>
+          </div>
+        </div>
+
+        <div class="card howto">
+          <h2>玩法</h2>
+          <ol>
+            <li>一个人点<b>「创建房间」</b>，把 4 位房间号发给对方</li>
+            <li>对方打开这个页面，输入房间号点<b>「加入」</b></li>
+            <li>一局 <b>10 轮</b>：系统出词，只给画的人看，60 秒内画出来</li>
+            <li>猜对：猜的人 <b>+10 分</b>，画的人 <b>+5 分</b>，然后换边</li>
+            <li>超时公布答案，不扣分</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- 等待室 -->
+      <section id="screen-wait" class="hidden">
+        <div class="wait-wrap">
+          <h2 id="wait-title">房间已创建</h2>
+          <p class="muted" style="margin:0">把房间号发给 TA，TA 输入后就能进来</p>
+          <div class="room-code" id="room-code">----</div>
+          <div class="wait-actions" style="max-width:280px;margin:0 auto">
+            <button class="btn ghost small" id="btn-copy">复制房间号</button>
+          </div>
+          <p class="wait-status"><span id="wait-status-text">等待对方加入</span><span class="dots" id="wait-dots"></span></p>
+          <div class="wait-actions">
+            <button class="btn hidden" id="btn-start">开始游戏</button>
+            <button class="btn ghost" id="btn-leave-wait">返回首页</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 对局 -->
+      <section id="screen-game" class="hidden">
+        <div class="topbar">
+          <div class="score-chip me">
+            <div class="who">我</div>
+            <div class="pts" id="score-me">0</div>
+          </div>
+          <div class="mid-chip">
+            <div class="round" id="round-label">第 1 / 10 轮</div>
+            <div class="timer" id="timer-label">60</div>
+          </div>
+          <div class="score-chip">
+            <div class="who">对方</div>
+            <div class="pts" id="score-op">0</div>
+          </div>
+        </div>
+        <div class="timerbar"><div id="timer-fill" style="width:100%"></div></div>
+
+        <div class="role-banner">
+          <div>
+            <div class="role" id="role-label">你来画</div>
+            <div class="cat" id="cat-label"></div>
+          </div>
+          <div>
+            <div class="word" id="word-label"></div>
+            <div class="blanks hidden" id="blanks-label"></div>
+          </div>
+        </div>
+
+        <div class="board-wrap">
+          <canvas id="board" width="960" height="720"></canvas>
+          <div class="board-overlay hidden" id="board-overlay">
+            <div class="big" id="overlay-title">准备</div>
+            <div class="ans hidden" id="overlay-answer"></div>
+            <div class="sub" id="overlay-sub"></div>
+          </div>
+        </div>
+
+        <div class="feed" id="feed"></div>
+
+        <!-- 画的人：工具栏 -->
+        <div class="tools hidden" id="tools">
+          <div class="swatches" id="swatches"></div>
+          <div class="tool-row" id="size-row">
+            <button class="tool-btn" data-size="s"><span class="dot" style="width:5px;height:5px"></span>细</button>
+            <button class="tool-btn on" data-size="m"><span class="dot" style="width:9px;height:9px"></span>中</button>
+            <button class="tool-btn" data-size="l"><span class="dot" style="width:14px;height:14px"></span>粗</button>
+          </div>
+          <div class="tool-row">
+            <button class="tool-btn" id="btn-eraser">橡皮擦</button>
+            <button class="tool-btn" id="btn-clear">清空画板</button>
+          </div>
+        </div>
+
+        <!-- 猜的人：输入框 -->
+        <form class="guess-row hidden" id="guess-form">
+          <input id="guess-input" type="text" placeholder="输入你猜的词…" autocomplete="off" maxlength="12" aria-label="输入你猜的词" />
+          <button class="btn" type="submit">猜！</button>
+        </form>
+        <p class="drawer-note hidden" id="drawer-note">你负责画，不能打字剧透哦</p>
+      </section>
+
+      <!-- 结算 -->
+      <section id="screen-over" class="hidden">
+        <div class="over-wrap">
+          <h2 id="over-title">游戏结束</h2>
+          <p class="muted" id="over-sub" style="margin:0">10 轮全部完成</p>
+          <div class="final-scores">
+            <div class="score-chip me">
+              <div class="who">我</div>
+              <div class="pts" id="final-me">0</div>
+            </div>
+            <div class="score-chip">
+              <div class="who">对方</div>
+              <div class="pts" id="final-op">0</div>
+            </div>
+          </div>
+          <div class="over-actions">
+            <button class="btn" id="btn-rematch">再来一局</button>
+            <button class="btn ghost" id="btn-home">返回首页</button>
+          </div>
+          <p class="muted hidden" id="rematch-wait" style="margin-top:14px">已发送邀请，等对方开始…</p>
+        </div>
+      </section>
+    </div>
+
+    <!-- 对方离开弹窗 -->
+    <div class="modal-mask hidden" id="modal-left">
+      <div class="modal">
+        <h3>对方离开了</h3>
+        <p>连接已断开，这局结束啦。<br />回到首页，重新建个房间再约 TA。</p>
+        <button class="btn" id="btn-left-home">返回首页</button>
+      </div>
+    </div>
+
+    <div id="toast" role="status"></div>
+
+    <script>
+    'use strict';
+    /* ================= 词库（日常 + 情侣，共 130+） ================= */
+    var WORDS_DAILY = ['苹果','香蕉','西瓜','草莓','葡萄','橙子','猫','狗','兔子','熊猫','大象','长颈鹿','猴子','乌龟','青蛙','蝴蝶','蜜蜂','金鱼','雨伞','自行车','飞机','火车','轮船','汽车','房子','太阳','月亮','星星','云朵','雪人','花朵','大树','眼镜','书包','牙刷','手机','电脑','电视','冰箱','台灯','钟表','镜子','剪刀','钥匙','气球','风筝','足球','篮球','吉他','钢琴','蛋糕','冰淇淋','汉堡','薯条','火锅','饺子','面条','鸡蛋','牛奶','咖啡','筷子','耳机','手表','帽子','围巾','手套','袜子','被子','枕头','椅子','桌子','滑梯','游泳','跳绳','跑步','下雨','彩虹','雪花','沙滩','大海','山','河','桥','学校','医院','超市','电影院','图书馆','公园'];
+    var WORDS_COUPLE = ['第一次约会','牵手','拥抱','电影票','奶茶','玫瑰花','巧克力','情书','合照','散步','看日落','看星星','烛光晚餐','生日蛋糕','惊喜','礼物','逛街','游乐园','摩天轮','旋转木马','过山车','抓娃娃','晚安','早安','想你','吃醋','脸红','心跳','道歉','和好','纪念日','情侣装','情侣手链','明信片','旅行','野餐','放风筝','一起做饭','靠肩膀','摸头','公主抱','求婚','婚礼','戒指','白头到老','心心相印','分你一半','同一把伞','打电话','写信','看电影','拍照','告白','约会','散步牵手','喂食','梳头'];
+    var ALL_WORDS = [];
+    WORDS_DAILY.forEach(function(w){ ALL_WORDS.push({w:w, c:'日常类'}); });
+    WORDS_COUPLE.forEach(function(w){ ALL_WORDS.push({w:w, c:'情侣类'}); });
+
+    /* ================= 工具 ================= */
+    function $(id){ return document.getElementById(id); }
+    function show(screenId){
+      ['screen-home','screen-wait','screen-game','screen-over'].forEach(function(s){
+        $(s).classList.toggle('hidden', s !== screenId);
+      });
+    }
+    var toastTimer = null;
+    function toast(msg){
+      var t = $('toast'); t.textContent = msg; t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2600);
+    }
+    function shuffle(a){
+      var arr = a.slice();
+      for (var i = arr.length - 1; i > 0; i--){
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+      }
+      return arr;
+    }
+    var CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    function makeCode(){
+      var s = '';
+      for (var i = 0; i < 4; i++) s += CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)];
+      return s;
+    }
+    var PEER_PREFIX = 'nhwc-game-v1-';
+
+    /* ================= 联机报错：中文原因 + 下一步 ================= */
+    var lastAction = 'create'; // 'create' | 'join'，重试按钮按这个重走
+    var connectTimeout = null;
+    function clearConnectTimeout(){
+      if (connectTimeout) { clearTimeout(connectTimeout); connectTimeout = null; }
+    }
+    function showHomeError(msg){
+      $('home-error-text').textContent = msg;
+      $('home-error').classList.remove('hidden');
+    }
+    function hideHomeError(){ $('home-error').classList.add('hidden'); }
+    // 把 PeerJS 的英文错误类型翻成中文：说清是网络问题还是服务器问题 + 让用户点重试
+    function describePeerError(type, action){
+      switch (type) {
+        case 'network':
+          return '网络问题：连不上联机服务器，可能是你的 Wi-Fi 或流量不稳定、暂时断开了。请检查网络后，点「重试」。';
+        case 'server-error':
+          return '服务器问题：联机服务器暂时没响应，不是你的操作或房间号有问题。请稍等几秒，点「重试」。';
+        case 'socket-error':
+        case 'socket-closed':
+          return '网络问题：和联机服务器的连接中断了。请检查网络后，点「重试」。';
+        case 'peer-unavailable':
+          return '找不到这个房间：房间号可能输错了，或者房主还没建好房间 / 已经离开了。请核对 4 位房间号，确认房主还停在等待页面后，点「重试」。';
+        case 'unavailable-id':
+          return '房间号刚好被别人占用了。请点「重试」，系统会换一个新房间号。';
+        case 'browser-incompatible':
+          return '浏览器问题：当前浏览器不支持联机功能。请换用最新版 Chrome、Safari 或 Edge 打开这个页面，再点「重试」。';
+        case 'invalid-id':
+          return '房间号格式不对：请输入 4 位房间号，改好后点「重试」。';
+        case 'invalid-key':
+          return '服务器问题：联机服务配置异常，暂时连不上。请稍后再点「重试」。';
+        case 'webrtc':
+          return '连接问题：两台设备没能连通，可能是当前网络有限制。请换一个网络（比如切到流量）后，点「重试」。';
+        case 'disconnected':
+          return '网络问题：和联机服务器的连接已断开。请检查网络后，点「重试」。';
+        default:
+          return '连接出现问题：可能是网络不稳定，也可能是联机服务器暂时繁忙' + (type ? '（错误类型：' + type + '）' : '') + '。请检查网络后，点「重试」；如果多次失败，等一会儿再试。';
+      }
+    }
+    function peerErrorToast(type){
+      // 对局/等待中出现的单次错误：同样只说中文原因，不甩英文码
+      switch (type) {
+        case 'network':
+        case 'socket-error':
+        case 'socket-closed':
+        case 'disconnected':
+          return '网络连接中断，请检查网络';
+        case 'server-error':
+          return '联机服务器暂时没响应，请稍后再试';
+        case 'peer-unavailable':
+          return '找不到对方，请核对房间号';
+        default:
+          return '连接出现问题，请检查网络后重试';
+      }
+    }
+
+    /* ================= 全局状态 ================= */
+    var peer = null, conn = null;
+    var isHost = false, connected = false, gameStarted = false;
+    var myKey = 'host', opKey = 'guest';       // 我在计分表里的键
+    var scores = { host: 0, guest: 0 };
+    var curRound = 0, curDrawer = 'host';      // 本轮谁画：'host' | 'guest'
+    var roundActive = false;
+    var iAmDrawer = false;
+
+    function send(obj){ if (conn && conn.open) { try { conn.send(obj); } catch(e){} } }
+
+    /* ================= 画板 ================= */
+    var canvas = $('board'), ctx = canvas.getContext('2d');
+    var COLORS = ['#333333','#e64545','#f08c21','#f5c518','#3fa34d','#2bb3a3','#3b7dd8','#8b5cf6','#f272a7','#8a5a33'];
+    var SIZES = { s: 7, m: 14, l: 24 };
+    var pen = { color: COLORS[0], size: 'm', eraser: false };
+    var drawing = false, lastPt = null;
+
+    function clearBoard(){ ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    function drawSeg(a, b, color, sizeKey, eraser){
+      ctx.save();
+      ctx.globalCompositeOperation = eraser ? 'destination-out' : 'source-over';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = SIZES[sizeKey] || 14;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(a[0] * canvas.width, a[1] * canvas.height);
+      ctx.lineTo(b[0] * canvas.width, b[1] * canvas.height);
+      ctx.stroke();
+      ctx.restore();
+    }
+    function evtPt(e){
+      var r = canvas.getBoundingClientRect();
+      return [ (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height ];
+    }
+    canvas.addEventListener('pointerdown', function(e){
+      if (!iAmDrawer || !roundActive) return;
+      e.preventDefault();
+      drawing = true; lastPt = evtPt(e);
+      try { canvas.setPointerCapture(e.pointerId); } catch(err){}
+      drawSeg(lastPt, lastPt, pen.color, pen.size, pen.eraser);
+      send({ t:'seg', a:lastPt, b:lastPt, c:pen.color, s:pen.size, e:pen.eraser });
+    });
+    canvas.addEventListener('pointermove', function(e){
+      if (!drawing || !iAmDrawer || !roundActive) return;
+      e.preventDefault();
+      var pts = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+      for (var i = 0; i < pts.length; i++){
+        var p = evtPt(pts[i]);
+        drawSeg(lastPt, p, pen.color, pen.size, pen.eraser);
+        send({ t:'seg', a:lastPt, b:p, c:pen.color, s:pen.size, e:pen.eraser });
+        lastPt = p;
+      }
+    });
+    function endStroke(){ drawing = false; lastPt = null; }
+    canvas.addEventListener('pointerup', endStroke);
+    canvas.addEventListener('pointercancel', endStroke);
+
+    /* 工具栏 */
+    var swWrap = $('swatches');
+    COLORS.forEach(function(c, i){
+      var b = document.createElement('button');
+      b.className = 'sw' + (i === 0 ? ' on' : '');
+      b.style.background = c;
+      b.setAttribute('aria-label', '颜色 ' + (i + 1));
+      b.addEventListener('click', function(){
+        pen.color = c; pen.eraser = false;
+        $('btn-eraser').classList.remove('on');
+        swWrap.querySelectorAll('.sw').forEach(function(x){ x.classList.remove('on'); });
+        b.classList.add('on');
+      });
+      swWrap.appendChild(b);
+    });
+    $('size-row').querySelectorAll('.tool-btn').forEach(function(b){
+      b.addEventListener('click', function(){
+        pen.size = b.getAttribute('data-size');
+        $('size-row').querySelectorAll('.tool-btn').forEach(function(x){ x.classList.remove('on'); });
+        b.classList.add('on');
+      });
+    });
+    $('btn-eraser').addEventListener('click', function(){
+      pen.eraser = !pen.eraser;
+      this.classList.toggle('on', pen.eraser);
+      if (pen.eraser) swWrap.querySelectorAll('.sw').forEach(function(x){ x.classList.remove('on'); });
+    });
+    $('btn-clear').addEventListener('click', function(){
+      if (!iAmDrawer || !roundActive) return;
+      clearBoard(); send({ t:'clear' });
+    });
+    </script>
+    <script>
+    'use strict';
+    /* ================= 界面更新 ================= */
+    function renderScores(){
+      $('score-me').textContent = scores[myKey];
+      $('score-op').textContent = scores[opKey];
+      $('final-me').textContent = scores[myKey];
+      $('final-op').textContent = scores[opKey];
+    }
+    function setTimerUI(left){
+      $('timer-label').textContent = left;
+      $('timer-label').classList.toggle('low', left <= 10);
+      var fill = $('timer-fill');
+      fill.style.width = (left / 60 * 100) + '%';
+      fill.classList.toggle('low', left <= 10);
+    }
+    function showOverlay(title, answer, sub){
+      $('overlay-title').textContent = title;
+      var a = $('overlay-answer');
+      if (answer) { a.textContent = '「' + answer + '」'; a.classList.remove('hidden'); }
+      else a.classList.add('hidden');
+      $('overlay-sub').textContent = sub || '';
+      $('board-overlay').classList.remove('hidden');
+    }
+    function hideOverlay(){ $('board-overlay').classList.add('hidden'); }
+    function setRoleUI(drawerKey, word, len, cat){
+      iAmDrawer = (drawerKey === myKey);
+      curDrawer = drawerKey;
+      $('role-label').textContent = iAmDrawer ? '你来画' : 'TA 在画';
+      $('cat-label').textContent = cat ? ('类别：' + cat) : '';
+      if (iAmDrawer) {
+        $('word-label').textContent = word || '';
+        $('word-label').classList.remove('hidden');
+        $('blanks-label').classList.add('hidden');
+      } else {
+        $('word-label').classList.add('hidden');
+        var blanks = '';
+        for (var i = 0; i < (len || 0); i++) blanks += '＿';
+        $('blanks-label').textContent = blanks;
+        $('blanks-label').classList.remove('hidden');
+      }
+      $('tools').classList.toggle('hidden', !iAmDrawer);
+      $('guess-form').classList.toggle('hidden', iAmDrawer);
+      $('drawer-note').classList.toggle('hidden', !iAmDrawer);
+      canvas.classList.toggle('locked', !iAmDrawer);
+    }
+    function addFeed(text, ok, mine){
+      var feed = $('feed');
+      var who = feed.querySelector('.who');
+      if (!who) {
+        who = document.createElement('span');
+        who.className = 'who';
+        who.textContent = '猜过的词：';
+        feed.appendChild(who);
+      }
+      var g = document.createElement('span');
+      g.className = 'g ' + (ok ? 'ok' : 'no');
+      g.textContent = (mine ? '我猜：' : 'TA 猜：') + text;
+      feed.appendChild(g);
+      while (feed.children.length > 9) feed.removeChild(feed.children[1]);
+    }
+    function clearFeed(){ $('feed').innerHTML = ''; }
+
+    /* ================= 回合流程（通用渲染，两端共用） ================= */
+    function beginRoundUI(round, drawerKey, word, len, cat){
+      curRound = round;
+      $('round-label').textContent = '第 ' + round + ' / 10 轮';
+      clearBoard(); clearFeed(); hideOverlay();
+      setTimerUI(60);
+      setRoleUI(drawerKey, word, len, cat);
+      renderScores();
+      roundActive = true;
+      if (!iAmDrawer) setTimeout(function(){ $('guess-input').focus({ preventScroll: true }); }, 350);
+    }
+    function endRoundUI(reason, word, byKey){
+      roundActive = false;
+      var sub;
+      if (reason === 'correct') {
+        sub = (byKey === myKey ? '你猜对啦！你 +10 分，画的人 +5 分' : 'TA 猜对啦！TA +10 分，画的人 +5 分');
+        showOverlay('猜对了！', word, sub);
+      } else {
+        showOverlay('时间到', word, '这轮没人猜中，不扣分');
+      }
+      renderScores();
+    }
+    function gameOverUI(){
+      roundActive = false;
+      renderScores();
+      var me = scores[myKey], op = scores[opKey];
+      $('over-title').textContent = me > op ? '你赢啦！' : (me < op ? 'TA 赢啦' : '平局！');
+      $('over-sub').textContent = me > op ? '画功和默契都在线' : (me < op ? '虽败犹荣，再来一局翻盘' : '势均力敌，太有默契了');
+      $('rematch-wait').classList.add('hidden');
+      $('btn-rematch').disabled = false;
+      show('screen-over');
+    }
+
+    /* ================= 房主：对局主持 ================= */
+    var G = null; // 仅房主持有
+    function hostStartGame(){
+      if (!connected) { toast('等对方加入后再开始'); return; }
+      G = {
+        deck: shuffle(ALL_WORDS).slice(0, 10),
+        round: 0,
+        scores: { host: 0, guest: 0 },
+        timer: null, endAt: 0, left: 60,
+        word: null, cat: null, active: false
+      };
+      scores = G.scores;
+      gameStarted = true;
+      hostNextRound();
+    }
+    function hostNextRound(){
+      if (!G) return;
+      if (G.round >= 10) { hostGameOver(); return; }
+      G.round += 1;
+      var item = G.deck[G.round - 1];
+      G.word = item.w; G.cat = item.c;
+      var drawerKey = (G.round % 2 === 1) ? 'host' : 'guest';
+      G.active = true;
+      send({ t:'round', round: G.round, drawer: drawerKey, word: (drawerKey === 'guest' ? G.word : null), len: G.word.length, cat: G.cat, scores: G.scores });
+      show('screen-game');
+      beginRoundUI(G.round, drawerKey, drawerKey === 'host' ? G.word : null, G.word.length, G.cat);
+      /* 计时 */
+      G.endAt = Date.now() + 60000;
+      G.left = 60;
+      clearInterval(G.timer);
+      G.timer = setInterval(function(){
+        var left = Math.max(0, Math.ceil((G.endAt - Date.now()) / 1000));
+        if (left !== G.left) {
+          G.left = left;
+          setTimerUI(left);
+          send({ t:'tick', left: left });
+        }
+        if (left <= 0) hostEndRound('timeout', null);
+      }, 200);
+    }
+    function hostEndRound(reason, byKey){
+      if (!G || !G.active) return;
+      G.active = false;
+      clearInterval(G.timer);
+      send({ t:'end', reason: reason, word: G.word, by: byKey, scores: G.scores });
+      endRoundUI(reason, G.word, byKey);
+      setTimeout(function(){ if (G) hostNextRound(); }, 3800);
+    }
+    function hostGameOver(){
+      send({ t:'over', scores: G.scores });
+      var s = G.scores; G = null;
+      scores = s;
+      gameOverUI();
+    }
+    function hostCheckGuess(text, fromKey){
+      if (!G || !G.active) return;
+      var drawerKey = (G.round % 2 === 1) ? 'host' : 'guest';
+      if (fromKey === drawerKey) return; // 画的人不能猜
+      var ok = (text === G.word);
+      send({ t:'feed', text: text, ok: ok, by: fromKey });
+      addFeed(text, ok, fromKey === myKey);
+      if (ok) {
+        G.scores[fromKey] += 10;
+        G.scores[drawerKey] += 5;
+        scores = G.scores;
+        hostEndRound('correct', fromKey);
+      }
+    }
+
+    /* ================= 消息处理 ================= */
+    function onData(d){
+      if (!d || !d.t) return;
+      switch (d.t) {
+        case 'seg':
+          if (!iAmDrawer) drawSeg(d.a, d.b, d.c, d.s, d.e);
+          break;
+        case 'clear':
+          if (!iAmDrawer) clearBoard();
+          break;
+        case 'round': // 房主 → 客人
+          scores = d.scores; gameStarted = true;
+          show('screen-game');
+          beginRoundUI(d.round, d.drawer, d.word, d.len, d.cat);
+          break;
+        case 'tick':
+          if (!isHost) setTimerUI(d.left);
+          break;
+        case 'feed':
+          addFeed(d.text, d.ok, d.by === myKey);
+          break;
+        case 'guess': // 客人 → 房主
+          if (isHost) hostCheckGuess((d.text || '').trim(), 'guest');
+          break;
+        case 'end':
+          scores = d.scores;
+          endRoundUI(d.reason, d.word, d.by);
+          break;
+        case 'over':
+          scores = d.scores;
+          gameOverUI();
+          break;
+        case 'rematch': // 客人请求再来一局
+          if (isHost) hostStartGame();
+          break;
+        case 'peer-joined':
+          break;
+      }
+    }
+
+    /* ================= 连接管理 ================= */
+    function wireConn(c){
+      conn = c;
+      conn.on('data', onData);
+      conn.on('open', function(){
+        connected = true;
+        clearConnectTimeout();
+        hideHomeError();
+        onPeerReady();
+      });
+      conn.on('close', function(){ onPeerGone(); });
+      conn.on('error', function(err){
+        // 连接已建立后的单次错误不直接踢回首页，只给中文提示
+        if (connected) toast(peerErrorToast(err && err.type));
+      });
+      if (conn.open) { connected = true; clearConnectTimeout(); onPeerReady(); }
+    }
+    function onPeerReady(){
+      if (isHost) {
+        $('wait-status-text').textContent = '对方已加入！点「开始游戏」吧';
+        $('wait-dots').classList.add('hidden');
+        $('btn-start').classList.remove('hidden');
+        toast('对方加入啦');
+      } else {
+        $('wait-title').textContent = '已加入房间';
+        $('wait-status-text').textContent = '已连接！等房主开始游戏';
+        $('wait-dots').classList.add('hidden');
+        toast('成功加入房间');
+      }
+    }
+    function onPeerGone(){
+      if (!connected) return;
+      connected = false;
+      if (G) { clearInterval(G.timer); G = null; }
+      $('modal-left').classList.remove('hidden');
+    }
+    function teardown(){
+      clearConnectTimeout();
+      try { if (conn) conn.close(); } catch(e){}
+      try { if (peer) peer.destroy(); } catch(e){}
+      peer = null; conn = null; connected = false; gameStarted = false;
+      G = null; roundActive = false;
+      scores = { host: 0, guest: 0 };
+      $('btn-create').disabled = false;
+      $('btn-create').textContent = '创建房间';
+      $('btn-join').disabled = false;
+      $('btn-join').textContent = '加入';
+    }
+    function backHome(){
+      teardown();
+      hideHomeError();
+      $('modal-left').classList.add('hidden');
+      show('screen-home');
+    }
+    // 联机失败统一收尾：清掉连接、按钮恢复可点、回首页并亮出中文原因 + 重试按钮
+    function failToHome(msg){
+      teardown(); // 内部会恢复创建/加入按钮的可用状态和文案
+      show('screen-home');
+      showHomeError(msg);
+    }
+
+    /* ================= 创建 / 加入 ================= */
+    $('btn-create').addEventListener('click', function(){
+      lastAction = 'create';
+      hideHomeError();
+      if (typeof Peer === 'undefined') {
+        showHomeError('联机组件没加载出来：可能是网络问题，相关文件没下载成功。请检查网络后，点「重试」；如果多次失败，请刷新页面再试。');
+        return;
+      }
+      isHost = true; myKey = 'host'; opKey = 'guest';
+      var code = makeCode();
+      var opened = false, settled = false;
+      $('btn-create').disabled = true;
+      $('btn-create').textContent = '正在创建…';
+      try { peer = new Peer(PEER_PREFIX + code, { debug: 0 }); }
+      catch (e) {
+        $('btn-create').disabled = false;
+        $('btn-create').textContent = '创建房间';
+        showHomeError('创建失败：联机组件启动不了。请检查网络后，点「重试」。');
+        return;
+      }
+      // 10 秒超时：连不上 PeerServer 时不再无限卡在“正在创建…”
+      clearConnectTimeout();
+      connectTimeout = setTimeout(function(){
+        if (opened || settled) return;
+        settled = true;
+        failToHome('连接超时，请检查网络后重试。10 秒内没能连上联机服务器，可能是网络不稳定，也可能是服务器暂时繁忙。');
+      }, 10000);
+      peer.on('open', function(){
+        opened = true;
+        clearConnectTimeout();
+        $('btn-create').disabled = false;
+        $('btn-create').textContent = '创建房间';
+        $('wait-title').textContent = '房间已创建';
+        $('room-code').textContent = code;
+        $('wait-status-text').textContent = '等待对方加入';
+        $('wait-dots').classList.remove('hidden');
+        $('btn-start').classList.add('hidden');
+        $('btn-copy').classList.remove('hidden');
+        show('screen-wait');
+      });
+      peer.on('connection', function(c){
+        if (conn && conn.open) { /* 已有玩家，拒绝多余连接 */ try { c.close(); } catch(e){} return; }
+        wireConn(c);
+      });
+      peer.on('error', function(err){
+        var type = err && err.type;
+        if (type === 'unavailable-id' && !opened) {
+          clearConnectTimeout();
+          toast('房间号被占用，正在换一个…');
+          try { peer.destroy(); } catch(e){}
+          peer = null;
+          $('btn-create').disabled = false;
+          $('btn-create').textContent = '创建房间';
+          setTimeout(function(){ $('btn-create').click(); }, 600);
+          return;
+        }
+        if (opened) {
+          // 房间已建好后的单次错误：只提示中文原因，不把人踢回首页
+          toast(peerErrorToast(type));
+          return;
+        }
+        if (settled) return;
+        settled = true;
+        failToHome(describePeerError(type, 'create'));
+      });
+      peer.on('disconnected', function(){ try { peer.reconnect(); } catch(e){} });
+    });
+
+    $('btn-join').addEventListener('click', function(){
+      var code = $('input-code').value.trim().toUpperCase();
+      if (code.length !== 4) { toast('请输入 4 位房间号'); return; }
+      lastAction = 'join';
+      hideHomeError();
+      if (typeof Peer === 'undefined') {
+        showHomeError('联机组件没加载出来：可能是网络问题，相关文件没下载成功。请检查网络后，点「重试」；如果多次失败，请刷新页面再试。');
+        return;
+      }
+      isHost = false; myKey = 'guest'; opKey = 'host';
+      $('btn-join').disabled = true;
+      $('btn-join').textContent = '连接中…';
+      var settled = false;
+      try { peer = new Peer({ debug: 0 }); }
+      catch (e) {
+        $('btn-join').disabled = false;
+        $('btn-join').textContent = '加入';
+        showHomeError('加入失败：联机组件启动不了。请检查网络后，点「重试」。');
+        return;
+      }
+      function joinTimeout(){
+        if (settled || connected) return;
+        settled = true;
+        failToHome('连接超时，请检查网络后重试。没能连上房主，请确认房间号无误、房主还在线并且还停在等待页面，然后点「重试」。');
+      }
+      // 第一阶段：10 秒内连不上联机服务器就超时，不再无限转圈
+      clearConnectTimeout();
+      connectTimeout = setTimeout(joinTimeout, 10000);
+      peer.on('open', function(){
+        var c;
+        try { c = peer.connect(PEER_PREFIX + code, { reliable: true }); }
+        catch (e) {
+          if (!settled) { settled = true; failToHome('加入失败：没能发起连接。请检查网络后，点「重试」。'); }
+          return;
+        }
+        wireConn(c);
+        // 连接建立失败（比如房主不存在）时 PeerJS 会走 conn 的 error，这里兜底处理
+        c.on('error', function(err){
+          if (connected || settled) return;
+          settled = true;
+          failToHome(describePeerError(err && err.type, 'join'));
+        });
+        $('wait-title').textContent = '正在加入房间';
+        $('room-code').textContent = code;
+        $('wait-status-text').textContent = '正在连接房主';
+        $('wait-dots').classList.remove('hidden');
+        $('btn-copy').classList.add('hidden');
+        $('btn-start').classList.add('hidden');
+        show('screen-wait');
+        // 第二阶段：再给 10 秒等房主回应，连不上同样回首页给重试入口，不用刷新
+        clearConnectTimeout();
+        connectTimeout = setTimeout(joinTimeout, 10000);
+      });
+      peer.on('error', function(err){
+        var type = err && err.type;
+        if (connected) { toast(peerErrorToast(type)); return; }
+        if (settled) return;
+        settled = true;
+        // peer-unavailable 等都会在这里给出中文原因 + 回首页 + 重试按钮
+        failToHome(describePeerError(type, 'join'));
+      });
+      peer.on('disconnected', function(){ try { peer.reconnect(); } catch(e){} });
+    });
+    function backHomeSilent(){
+      teardown();
+      show('screen-home');
+    }
+    $('btn-retry').addEventListener('click', function(){
+      hideHomeError();
+      if (lastAction === 'join') $('btn-join').click();
+      else $('btn-create').click();
+    });
+    $('input-code').addEventListener('input', function(){
+      this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    });
+    $('input-code').addEventListener('keydown', function(e){
+      if (e.key === 'Enter') $('btn-join').click();
+    });
+
+    /* 等待室按钮 */
+    $('btn-copy').addEventListener('click', function(){
+      var code = $('room-code').textContent;
+      function done(){ toast('房间号已复制，发给 TA 吧'); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(done, function(){ fallbackCopy(code); done(); });
+      } else { fallbackCopy(code); done(); }
+    });
+    function fallbackCopy(text){
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch(e){}
+      document.body.removeChild(ta);
+    }
+    $('btn-start').addEventListener('click', function(){
+      if (isHost) hostStartGame();
+    });
+    $('btn-leave-wait').addEventListener('click', backHome);
+    $('btn-left-home').addEventListener('click', backHome);
+    $('btn-home').addEventListener('click', backHome);
+
+    /* 猜词提交 */
+    $('guess-form').addEventListener('submit', function(e){
+      e.preventDefault();
+      if (iAmDrawer || !roundActive) return;
+      var text = $('guess-input').value.trim();
+      if (!text) return;
+      $('guess-input').value = '';
+      if (isHost) hostCheckGuess(text, 'host');
+      else send({ t:'guess', text: text });
+    });
+
+    /* 再来一局 */
+    $('btn-rematch').addEventListener('click', function(){
+      if (isHost) { hostStartGame(); }
+      else {
+        send({ t:'rematch' });
+        $('btn-rematch').disabled = true;
+        $('rematch-wait').classList.remove('hidden');
+      }
+    });
+    </script>
+  </body>
+</html>
